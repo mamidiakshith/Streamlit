@@ -1,43 +1,47 @@
 import streamlit as st
-import random
+import pdfplumber
+import openai
 
-# Sample restaurant data
-restaurants = {
-    "Hyderabad": {
-        "Indian": ["Bawarchi", "Paradise Biryani", "Chutneys", "Shah Ghouse", "Ulavacharu"],
-        "Chinese": ["Mainland China", "Haka", "Wok Republic", "Chopsticks", "China Bistro"],
-        "Italian": ["Little Italy", "Olive Bistro", "Flechazo", "Prego", "Via Milano"]
-    },
-    "Bangalore": {
-        "Indian": ["Nagarjuna", "MTR", "Byg Brewski", "Karavalli", "Central Tiffin Room"],
-        "Chinese": ["Beijing Bites", "Wangs Kitchen", "Shao", "Szechwan Court", "Yauatcha"],
-        "Italian": ["Toit", "Truffles", "Brik Oven", "Chianti", "Toscano"]
-    },
-    "Chennai": {
-        "Indian": ["Murugan Idli Shop", "Copper Chimney", "Annachi", "A2B", "Kumar Mess"],
-        "Chinese": ["The Cascade", "Mainland China", "Peking Palace", "Golden Dragon", "China Town"],
-        "Italian": ["Tuscana", "Little Italy", "The Pasta Bar Veneto", "That Madras Place", "Benvenuto"]
-    },
-    "Delhi": {
-        "Indian": ["Karim’s", "Gulati", "Rajinder Da Dhaba", "Bukhara", "Sita Ram Diwan Chand"],
-        "Chinese": ["Berco’s", "Momo’s Point", "House of Ming", "Wow! Momo", "China Garden"],
-        "Italian": ["Big Chill", "Diggin", "Artusi", "Jamie’s Italian", "Sorrento"]
-    },
-    "Mumbai": {
-        "Indian": ["Gajalee", "Highway Gomantak", "Shree Thaker Bhojanalay", "Trishna", "Delhi Darbar"],
-        "Chinese": ["China Gate", "Hakkasan", "5 Spice", "Mainland China", "Ling's Pavilion"],
-        "Italian": ["Pizza By The Bay", "Little Italy", "Quattro", "Café Zoe", "Gustoso"]
-    }
-}
+st.set_page_config(page_title="🧠 Resume Analyzer & Career Guide", layout="centered")
 
-# App title
-st.title("🍽️ Restaurant Recommendation App")
+st.title("📄 Smart Resume Analyzer")
+st.subheader("Get career suggestions and feedback on your resume")
 
-# User inputs
-location = st.selectbox("📍 Choose your location:", list(restaurants.keys()))
-cuisine = st.selectbox("🍜 Choose a cuisine:", list(restaurants[location].keys()))
+openai.api_key = "YOUR_OPENAI_API_KEY"  # Replace with your key or use secrets
 
-# Recommend a restaurant
-if st.button("Recommend"):
-    choice = random.choice(restaurants[location][cuisine])
-    st.success(f"✅ Try **{choice}** for delicious {cuisine} food in {location}!")
+def extract_text_from_pdf(uploaded_file):
+    with pdfplumber.open(uploaded_file) as pdf:
+        text = ''
+        for page in pdf.pages:
+            text += page.extract_text()
+    return text
+
+def analyze_resume(text):
+    prompt = f"""
+    You are a career expert. A user uploaded their resume text below.
+    Analyze it and respond with:
+    1. Top 3 suitable job roles.
+    2. Key strengths.
+    3. Skill gaps to improve.
+    4. Overall suggestions.
+
+    Resume:
+    \"\"\"{text}\"\"\"
+    """
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # or gpt-4 if available
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
+
+uploaded_file = st.file_uploader("Upload your Resume (PDF)", type="pdf")
+
+if uploaded_file:
+    st.success("Resume uploaded successfully!")
+    with st.spinner("Analyzing your resume..."):
+        resume_text = extract_text_from_pdf(uploaded_file)
+        output = analyze_resume(resume_text)
+    st.markdown("### 🧾 Analysis Result")
+    st.markdown(output)
+else:
+    st.info("Please upload a PDF resume to continue.")
