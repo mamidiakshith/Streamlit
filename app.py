@@ -78,4 +78,4 @@ if st.session_state["history"]:
 
 # Footer
 st.markdown("---")
-st.caption("Made with ❤️ using Streamlit by [Akshith...].")
+st.caption("Made with ❤️ using Streamlit by [Your Name].")
